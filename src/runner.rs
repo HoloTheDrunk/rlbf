@@ -47,6 +47,6 @@ fn run_exp(node: &Exp, state: &mut State) {
             while *state.strip.get(state.position as usize).unwrap() != 0 {
                 run_seq_exp(body, state);
             }
-        },
+        }
     }
 }
