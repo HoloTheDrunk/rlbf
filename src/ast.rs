@@ -35,7 +35,7 @@ impl Display for Exp {
             Exp::Decrement => write!(f, "-"),
             Exp::Input => write!(f, ","),
             Exp::Output => writeln!(f, "."),
-            Exp::Loop{body} => write!(f, "[{}]", body),
+            Exp::Loop { body } => write!(f, "[{}]", body),
         }
     }
 }
