@@ -1,4 +1,5 @@
 mod ast;
+mod compiler;
 mod lexer;
 mod operators;
 mod parser;
@@ -25,7 +26,9 @@ fn main() -> std::io::Result<()> {
     runner::run(&ast);
 
     if let Some(output) = &args.output {
-        dbg!(output);
+        if let Err(e) = compiler::compile(&ast, output.clone()) {
+            eprintln!("An error happened while compiling the code: {}", e);
+        }
     }
 
     Ok(())

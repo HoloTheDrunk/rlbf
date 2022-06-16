@@ -25,13 +25,13 @@ pub fn run(ast: &SeqExp) {
 fn run_seq_exp(node: &SeqExp, state: &mut State) {
     for exp in node.exps.iter() {
         run_exp(exp, state);
-        if !matches!(exp, Exp::Loop { body: _ }) {
-            eprintln!(
-                "{}: {:?}",
-                exp,
-                state.strip[0..10].iter().collect::<Vec<&u8>>()
-            );
-        }
+        // if !matches!(exp, Exp::Loop { body: _ }) {
+        //     eprintln!(
+        //         "{}: {:?}",
+        //         exp,
+        //         state.strip[0..10].iter().collect::<Vec<&u8>>()
+        //     );
+        // }
     }
 }
 
