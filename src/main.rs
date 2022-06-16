@@ -1,11 +1,13 @@
 mod ast;
 mod compiler;
+use compiler::Compiler;
 mod lexer;
 mod operators;
 mod parser;
 mod runner;
 
 use clap::Parser;
+use inkwell::context::Context;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -26,8 +28,24 @@ fn main() -> std::io::Result<()> {
     runner::run(&ast);
 
     if let Some(output) = &args.output {
-        if let Err(e) = compiler::compile(&ast, output.clone()) {
+        let context = Context::create();
+        let compiler = {
+            Compiler {
+                context: &context,
+                module: context.create_module("brainfuck_rust"),
+                builder: context.create_builder(),
+            }
+        };
+
+        if let Err(e) = compiler.compile(&ast) {
             eprintln!("An error happened while compiling the code: {}", e);
+        }
+
+        if let Err(err) = compiler.write_to_file(output) {
+            eprintln!(
+                "An error happend while saving the output to `{}`: {}",
+                output, err
+            );
         }
     }
 

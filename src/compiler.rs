@@ -1,3 +1,4 @@
+use crate::ast::{Exp, SeqExp};
 use inkwell::{
     basic_block::BasicBlock,
     builder::Builder,
@@ -8,7 +9,6 @@ use inkwell::{
     values::{FunctionValue, PointerValue},
     AddressSpace, IntPredicate, OptimizationLevel,
 };
-use crate::ast::{Exp, SeqExp};
 use std::collections::VecDeque;
 
 pub struct Compiler<'ctx> {
@@ -45,7 +45,7 @@ impl<'ctx> Compiler<'ctx> {
         let mut consecutive = 1;
 
         while let Some(command) = exps.next() {
-            match *command {
+            match &*command {
                 Exp::Right => {
                     while let Some(&Exp::Right) = exps.peek() {
                         consecutive += 1;
@@ -80,8 +80,7 @@ impl<'ctx> Compiler<'ctx> {
 
                 Exp::Output => self.build_put(&functions, &ptr),
                 Exp::Input => self.build_get(&functions, &ptr)?,
-                Exp::Loop { body } => self.build_while(&functions, &ptr, &mut while_blocks),
-                _ => (),
+                Exp::Loop { body: _ } => self.build_while(&functions, &ptr, &mut while_blocks),
             }
 
             consecutive = 1;
