@@ -23,6 +23,7 @@ pub enum Token {
     LoopEnd,
 
     #[error]
-    #[regex(r"[ a-zA-Z0-9\t\n\f]+", logos::skip)]
+    // Ignore everything that isn't an operator
+    #[regex(r"[^<>+-.,\[\]]+", logos::skip)]
     Error,
 }

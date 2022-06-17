@@ -46,7 +46,7 @@ fn parse_seq_exp(node: &mut SeqExp, lexer: &mut Lexer<Token>, state: &mut State)
                 state.loop_depth -= 1;
                 return;
             }
-            _ => eprintln!("Unrecognized token: `{}`.", lexer.slice()),
+            _ => eprint!("{}", lexer.slice()),
         }
     }
 }
