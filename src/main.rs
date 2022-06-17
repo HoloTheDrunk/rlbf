@@ -6,9 +6,9 @@ mod operators;
 mod parser;
 mod runner;
 
-use std::process::Command;
 use clap::Parser;
 use inkwell::context::Context;
+use std::process::Command;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

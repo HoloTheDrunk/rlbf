@@ -179,11 +179,13 @@ impl<'ctx> Compiler<'ctx> {
             .builder
             .build_load(*ptr, "load ptr")
             .into_pointer_value();
+
         // unsafe because we are calling an unsafe function, since we could index out of bounds of the calloc
         let result = unsafe {
             self.builder
                 .build_in_bounds_gep(ptr_load, &[i32_amount], "add to pointer")
         };
+
         self.builder.build_store(*ptr, result);
     }
 
@@ -194,10 +196,12 @@ impl<'ctx> Compiler<'ctx> {
             .builder
             .build_load(*ptr, "load ptr")
             .into_pointer_value();
+
         let ptr_val = self.builder.build_load(ptr_load, "load ptr value");
         let result =
             self.builder
                 .build_int_add(ptr_val.into_int_value(), i8_amount, "add to data ptr");
+
         self.builder.build_store(ptr_load, result);
     }
 
@@ -208,16 +212,20 @@ impl<'ctx> Compiler<'ctx> {
         let getchar_result: Result<_, _> = getchar_call.try_as_basic_value().flip().into();
         let getchar_basicvalue =
             getchar_result.map_err(|_| "getchar returned void for some reason!")?;
+
         let i8_type = self.context.i8_type();
+
         let truncated = self.builder.build_int_truncate(
             getchar_basicvalue.into_int_value(),
             i8_type,
             "getchar truncate result",
         );
+
         let ptr_value = self
             .builder
             .build_load(*ptr, "load ptr value")
             .into_pointer_value();
+
         self.builder.build_store(ptr_value, truncated);
 
         Ok(())
@@ -230,11 +238,13 @@ impl<'ctx> Compiler<'ctx> {
                 .into_pointer_value(),
             "load ptr ptr value",
         );
+
         let s_ext = self.builder.build_int_s_extend(
             char_to_put.into_int_value(),
             self.context.i32_type(),
             "putchar sign extend",
         );
+
         self.builder
             .build_call(functions.putchar_fn, &[s_ext.into()], "putchar call");
     }
