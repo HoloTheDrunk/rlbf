@@ -17,7 +17,7 @@ struct Args {
     #[clap(short, long)]
     input: String,
 
-    /// If specified, compile program with given name (requires llvm)
+    /// If specified, compile program with given name
     #[clap(short, long)]
     output: Option<String>,
 
