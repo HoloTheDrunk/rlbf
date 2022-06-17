@@ -9,7 +9,6 @@ use inkwell::{
     values::{FunctionValue, PointerValue},
     AddressSpace, IntPredicate, OptimizationLevel,
 };
-use std::collections::VecDeque;
 
 pub struct Compiler<'ctx> {
     pub context: &'ctx Context,
@@ -36,11 +35,24 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     pub fn compile(&self, ast: &SeqExp) -> Result<(), String> {
-        let mut while_blocks = VecDeque::with_capacity(1024);
         let functions = self.init_functions();
         let (data, ptr) = self.build_main(&functions);
         self.init_pointers(&functions, &data, &ptr)?;
 
+        self.handle_exps(ast, &functions, &ptr)?;
+
+        self.build_free(&data);
+        self.return_zero();
+
+        Ok(())
+    }
+
+    fn handle_exps(
+        &self,
+        ast: &SeqExp,
+        functions: &Functions,
+        ptr: &PointerValue,
+    ) -> Result<(), String> {
         let mut exps = ast.exps.iter().peekable();
         let mut consecutive = 1;
 
@@ -51,23 +63,23 @@ impl<'ctx> Compiler<'ctx> {
                         consecutive += 1;
                         exps.next();
                     }
-                    self.build_add_ptr(consecutive, &ptr);
+                    self.build_add_ptr(consecutive, ptr);
                 }
 
                 Exp::Left => {
-                    while let Some(&Exp::Left) = exps.peek() {
+                    while let Some(Exp::Left) = exps.peek() {
                         consecutive += 1;
                         exps.next();
                     }
-                    self.build_add_ptr(-consecutive, &ptr);
+                    self.build_add_ptr(-consecutive, ptr);
                 }
 
                 Exp::Increment => {
-                    while let Some(&Exp::Increment) = exps.peek() {
+                    while let Some(Exp::Increment) = exps.peek() {
                         consecutive += 1;
                         exps.next();
                     }
-                    self.build_add(consecutive, &ptr);
+                    self.build_add(consecutive, ptr);
                 }
 
                 Exp::Decrement => {
@@ -75,19 +87,16 @@ impl<'ctx> Compiler<'ctx> {
                         consecutive += 1;
                         exps.next();
                     }
-                    self.build_add(-consecutive, &ptr);
+                    self.build_add(-consecutive, ptr);
                 }
 
-                Exp::Output => self.build_put(&functions, &ptr),
-                Exp::Input => self.build_get(&functions, &ptr)?,
-                Exp::Loop { body: _ } => self.build_while(&functions, &ptr, &mut while_blocks),
+                Exp::Output => self.build_put(functions, ptr),
+                Exp::Input => self.build_get(functions, ptr)?,
+                Exp::Loop { body } => self.build_while(functions, ptr, body)?,
             }
 
             consecutive = 1;
         }
-
-        self.build_free(&data);
-        self.return_zero();
 
         Ok(())
     }
@@ -234,25 +243,19 @@ impl<'ctx> Compiler<'ctx> {
         &self,
         functions: &Functions,
         ptr: &PointerValue,
-        while_blocks: &mut VecDeque<WhileBlock<'ctx>>,
-    ) {
-        let num_while_blocks = while_blocks.len() + 1;
+        exps: &SeqExp,
+    ) -> Result<(), String> {
         let while_block = WhileBlock {
-            while_start: self.context.append_basic_block(
-                functions.main_fn,
-                format!("while_start {}", num_while_blocks).as_str(),
-            ),
-            while_body: self.context.append_basic_block(
-                functions.main_fn,
-                format!("while_body {}", num_while_blocks).as_str(),
-            ),
-            while_end: self.context.append_basic_block(
-                functions.main_fn,
-                format!("while_end {}", num_while_blocks).as_str(),
-            ),
+            while_start: self
+                .context
+                .append_basic_block(functions.main_fn, "while_start"),
+            while_body: self
+                .context
+                .append_basic_block(functions.main_fn, "while_body"),
+            while_end: self
+                .context
+                .append_basic_block(functions.main_fn, "while_end"),
         };
-        while_blocks.push_front(while_block);
-        let while_block = while_blocks.front().unwrap();
 
         self.builder
             .build_unconditional_branch(while_block.while_start);
@@ -278,17 +281,14 @@ impl<'ctx> Compiler<'ctx> {
         self.builder
             .build_conditional_branch(cmp, while_block.while_body, while_block.while_end);
         self.builder.position_at_end(while_block.while_body);
-    }
 
-    fn build_while_end(&self, while_blocks: &mut VecDeque<WhileBlock>) -> Result<(), String> {
-        if let Some(while_block) = while_blocks.pop_front() {
-            self.builder
-                .build_unconditional_branch(while_block.while_start);
-            self.builder.position_at_end(while_block.while_end);
-            Ok(())
-        } else {
-            Err("error: unmatched `]`".to_string())
-        }
+        self.handle_exps(exps, functions, ptr)?;
+
+        self.builder
+            .build_unconditional_branch(while_block.while_start);
+        self.builder.position_at_end(while_block.while_end);
+
+        Ok(())
     }
 
     fn build_free(&self, data: &PointerValue) {
